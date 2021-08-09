@@ -36,10 +36,10 @@ router.post(
 // @access  Public
 router.get("/", async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 0;
+    const page = parseInt(req.query.page < 0 ? 0 : req.query.page, 10) || 0;
     const limit = parseInt(req.query.limit, 10) || 10;
     const users = await User.find()
-      .sort({ _id: -1 })
+      .sort({ hour: req.query.hourSort })
       .skip(page * limit)
       .limit(limit);
 
@@ -63,4 +63,28 @@ router.get("/notification", async (req, res) => {
   }
 });
 
+router.delete("/deletedata", async (req, res) => {
+  try {
+    await User.deleteMany({
+      createdAt: {
+        $gte: new Date(req.body.datefrom),
+        $lte: new Date(req.body.dateto),
+      },
+    });
+    res.status(200).json({ message: "Data deleted" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Server Error!");
+  }
+});
+
+router.delete("/deletedata/all", async (req, res) => {
+  try {
+    await User.deleteMany();
+    res.status(200).json({ message: "All Data deleted" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Server Error!");
+  }
+});
 module.exports = router;

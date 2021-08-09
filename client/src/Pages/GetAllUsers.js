@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Flex,
   SimpleGrid,
+  Text,
   Spacer,
   Box,
   Heading,
@@ -31,6 +32,13 @@ import {
   PopoverBody,
   PopoverArrow,
   PopoverCloseButton,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableCaption,
 } from "@chakra-ui/react";
 import { MdNotificationsNone, MdSettings, MdAdd } from "react-icons/md";
 import axios from "axios";
@@ -39,15 +47,26 @@ import useSound from "use-sound";
 import beep from "./../assets/short_notification.mp3";
 import right from "./../assets/right.svg";
 import wrong from "./../assets/wrong.svg";
-import { AiFillStepForward, AiFillStepBackward } from "react-icons/ai";
+import {
+  AiFillStepForward,
+  AiFillStepBackward,
+  AiOutlineUserAdd,
+} from "react-icons/ai";
+import { BiBarcodeReader } from "react-icons/bi";
+import { useHistory } from "react-router-dom";
 
 const GetAllUsers = () => {
   const [openModel, setCloseModel] = useState(false);
+  const [openModelSetting, setCloseSettingModel] = useState(false);
   const [username, setUsername] = useState("");
   const [fiscale, setFiscale] = useState("");
   const [type, setType] = useState("Greenpass");
+  const [datefrom, setDatefrom] = useState();
+  const [dateto, setDateto] = useState();
+  const [userSaved, isUserSaved] = useState(false);
   const [isValid, setisValid] = useState(false);
   const [isNewNotification, setisNewNotification] = useState(false);
+  const [hourSort, setHourSort] = useState(-1);
   const hour = moment().format("hh:mm:ss A");
   const date = moment().format("dddd, Do MMMM YYYY");
   const [data, setData] = useState([]);
@@ -55,18 +74,50 @@ const GetAllUsers = () => {
   const [play] = useSound(beep, { interrupt: true });
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(0);
+  let history = useHistory();
 
   const closeModel = () => {
     setCloseModel(false);
   };
+  const closeModelSetting = () => {
+    setCloseSettingModel(false);
+  };
   const nextPage = () => {
-    setPage(page - 1);
+    setPage(page + 1);
+  };
+  const hourSortFunction = () => {
+    if (hourSort == 1) {
+      setHourSort(-1);
+    }
+    if (hourSort == -1) {
+      setHourSort(1);
+    }
   };
 
   const previousPage = () => {
-    setPage(page + 1);
+    if (page > 0) {
+      setPage(page - 1);
+    }
   };
 
+  async function deleteData() {
+    const deleteData = {
+      datefrom: datefrom,
+      dateto: dateto,
+    };
+    await axios({
+      method: "delete",
+      url: `/api/users/deletedata`,
+      data: deleteData,
+    });
+  }
+
+  async function deleteAllData() {
+    await axios({
+      method: "delete",
+      url: `/api/users/deletedata/all`,
+    });
+  }
   async function saveUser() {
     try {
       const data = {
@@ -84,6 +135,9 @@ const GetAllUsers = () => {
       });
       setCloseModel(false);
       setisNewNotification(true);
+      isUserSaved(true);
+      setUsername("");
+      setFiscale("");
       play();
     } catch (error) {
       console.error(error);
@@ -93,7 +147,7 @@ const GetAllUsers = () => {
   async function getUser() {
     await axios({
       method: "get",
-      url: `/api/users?limit=${limit}&page=${page}`,
+      url: `/api/users?limit=${limit}&page=${page}&hourSort=${hourSort}`,
     }).then((res) => setData(res.data));
     await axios({
       method: "get",
@@ -102,17 +156,19 @@ const GetAllUsers = () => {
   }
   useEffect(() => {
     getUser();
-  }, [limit, page]);
+  }, [limit, page, hourSort, userSaved]);
 
   const getTable = () => {
+    // let s_number = 1;
     if (data.length > 0) {
       return data.map((item, key) => {
         return (
-          <tr key={key}>
-            <td>{item.username}</td>
-            <td>{item.codice_fiscale}</td>
-            <td>{item.user_type}</td>
-            <td>
+          <Tr key={key}>
+            {/* <Td>{s_number++}</Td> */}
+            <Td>{item.username}</Td>
+            <Td>{item.codice_fiscale}</Td>
+            <Td>{item.user_type}</Td>
+            <Td>
               {item.isValid ? (
                 <span>
                   <img
@@ -132,8 +188,8 @@ const GetAllUsers = () => {
                   />
                 </span>
               )}
-            </td>
-            <td>
+            </Td>
+            <Td>
               {item.isValid ? (
                 <span>
                   <img
@@ -153,8 +209,8 @@ const GetAllUsers = () => {
                   />
                 </span>
               )}
-            </td>
-            <td>
+            </Td>
+            <Td>
               {item.isValid ? (
                 <span>
                   <img
@@ -174,14 +230,14 @@ const GetAllUsers = () => {
                   />
                 </span>
               )}
-            </td>
-            <td>{item.hour}</td>
-            <td>{item.date}</td>
-          </tr>
+            </Td>
+            <Td>{item.hour}</Td>
+            <Td>{item.date}</Td>
+          </Tr>
         );
       });
     } else {
-      return <h1>No data found</h1>;
+      return <Tr style={{ textAlign: "center" }}>No data found</Tr>;
     }
   };
   const getNotifications = () => {
@@ -190,12 +246,11 @@ const GetAllUsers = () => {
         return (
           <>
             <Box py={"2"} px={"1"}>
-              {item.message}
-              <br />
+              <Text style={{ fontSize: "13px" }}>{item.message}</Text>
               <Flex>
-                <Box>{item.hour}</Box>
+                <Box style={{ fontSize: "10px" }}>{item.hour}</Box>
                 <Spacer />
-                <Box>{item.date}</Box>
+                <Box style={{ fontSize: "10px" }}>{item.date}</Box>
               </Flex>
             </Box>
             <Divider />
@@ -210,7 +265,7 @@ const GetAllUsers = () => {
     <React.Fragment>
       <Flex p="5">
         <Box p="2">
-          <Heading size="md">Chakra App</Heading>
+          <Heading size="md">LOGO</Heading>
         </Box>
         <Spacer />
         <Box>
@@ -221,18 +276,22 @@ const GetAllUsers = () => {
                   size="40px"
                   color="white"
                   onClick={() => console.log("workign")}
-                  style={{ backgroundColor: "#0000FF", cursor: "pointer" }}
+                  style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
                 >
                   {isNewNotification ? (
                     <div class="icon">
                       <MdNotificationsNone
                         size="30px"
                         onClick={() => setisNewNotification(false)}
+                        style={{ color: "black" }}
                       />
                       <div class="txt"></div>
                     </div>
                   ) : (
-                    <MdNotificationsNone size="30px" />
+                    <MdNotificationsNone
+                      style={{ color: "black" }}
+                      size="30px"
+                    />
                   )}
                 </Circle>
               </PopoverTrigger>
@@ -248,51 +307,81 @@ const GetAllUsers = () => {
             <Circle
               size="40px"
               color="white"
-              style={{ backgroundColor: "#0000FF", cursor: "pointer" }}
+              style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
               onClick={() => setCloseModel(true)}
             >
-              <MdAdd size="30px" />
+              <MdAdd size="30px" style={{ color: "black" }} />
             </Circle>
             <Circle
               size="40px"
-              onClick={() => console.log("workign")}
+              onClick={() => setCloseSettingModel(true)}
               color="white"
-              style={{ backgroundColor: "#0000FF", cursor: "pointer" }}
+              style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
             >
-              <MdSettings size="30px" />
+              <MdSettings size="30px" style={{ color: "black" }} />
+            </Circle>
+            <Circle
+              size="40px"
+              onClick={() => history.push("./QrCodeReader")}
+              color="white"
+              style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
+            >
+              <BiBarcodeReader size="30px" style={{ color: "black" }} />
             </Circle>
           </HStack>
         </Box>
       </Flex>
-      <Box>
-        <table style={{ textAlign: "center", border: "1px solid" }}>
-          <thead>
-            <td>Username</td>
-            <td>Codice Fiscale</td>
-            <td>Type</td>
-            <td>Validity</td>
-            <td>Validity</td>
-            <td>Validity</td>
-            <td>Hour</td>
-            <td>Date</td>
-          </thead>
-          <tbody style={{ border: "1px solid" }}>{getTable()}</tbody>
-        </table>
+      <Box className="boxTable">
+        <Table
+          variant="striped"
+          colorScheme="teal"
+          style={{ textAlign: "center" }}
+        >
+          <TableCaption>Page {page + 1}</TableCaption>
+          <Thead>
+            <Tr style={{ textAlign: "center" }}>
+              {/* <Th>S#</Th> */}
+              <Th>Username</Th>
+              <Th>Codice Fiscale</Th>
+              <Th>Type</Th>
+              <Th>Validity</Th>
+              <Th>Validity</Th>
+              <Th>Validity</Th>
+              <Th
+                style={{ cursor: "pointer" }}
+                onClick={() => hourSortFunction()}
+              >
+                Hour
+              </Th>
+              <Th>Date</Th>
+            </Tr>
+          </Thead>
+          <Tbody style={{ textAlign: "center", fontSize: "14px" }}>
+            {getTable()}
+          </Tbody>
+        </Table>
+        <Box>
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div onClick={previousPage} style={{ cursor: "pointer" }}>
             {" "}
-            <AiFillStepBackward fontSize="20px"/>{" "}
+            <AiFillStepBackward fontSize="20px" />{" "}
           </div>
           <div onClick={nextPage} style={{ cursor: "pointer" }}>
             {" "}
-            <AiFillStepForward fontSize="20px"/>
+            <AiFillStepForward fontSize="20px" />
           </div>
         </div>
+        </Box>
       </Box>
-      <Modal isOpen={openModel} size="md">
+      <Modal isOpen={openModel} onClose={closeModel} size="md">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Add User</ModalHeader>
+          <ModalHeader>
+            <HStack>
+              <AiOutlineUserAdd />
+              <Text>Add User</Text>
+            </HStack>
+          </ModalHeader>
           <ModalCloseButton
             onClick={() => closeModel()}
             _focus={{ boxShadow: "none" }}
@@ -336,6 +425,68 @@ const GetAllUsers = () => {
                   Save
                 </Button>
               </SimpleGrid>
+            </form>
+          </ModalBody>
+
+          <ModalFooter></ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={openModelSetting} onClose={closeModelSetting} size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            <HStack>
+              <MdSettings />
+              <Text>Settings</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton
+            onClick={() => closeModelSetting()}
+            _focus={{ boxShadow: "none" }}
+          />
+          <ModalBody>
+            <form>
+              <SimpleGrid columns={2} spacing={10}>
+                <FormControl id="">
+                  <FormLabel>Enter Date From</FormLabel>
+                  <Input
+                    type="date"
+                    value={datefrom}
+                    onChange={(e) => setDatefrom(e.target.value)}
+                  />
+                </FormControl>
+                <FormControl id="">
+                  <FormLabel>Enter Date To</FormLabel>
+                  <Input
+                    type="date"
+                    value={dateto}
+                    onChange={(e) => setDateto(e.target.value)}
+                  />
+                </FormControl>
+              </SimpleGrid>
+              <Box textAlign="center">
+                <Button
+                  bg="red.500"
+                  _focus={{ backgroundColor: "red.500" }}
+                  _hover={{ backgroundColor: "red.500" }}
+                  onClick={() => deleteData()}
+                  mt={5}
+                  mr={2}
+                  width="135px"
+                >
+                  Delete data
+                </Button>
+                <Button
+                  bg="red.500"
+                  _focus={{ backgroundColor: "red.500" }}
+                  _hover={{ backgroundColor: "red.500" }}
+                  onClick={() => deleteAllData()}
+                  mt={5}
+                >
+                  Delete all data
+                </Button>
+              </Box>
             </form>
           </ModalBody>
 
