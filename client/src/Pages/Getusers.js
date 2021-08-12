@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import io from "socket.io-client";
 import {
   Flex,
   SimpleGrid,
@@ -55,6 +54,7 @@ import {
 } from "react-icons/ai";
 import { BiBarcodeReader } from "react-icons/bi";
 import { useHistory } from "react-router-dom";
+import firebase from "../utill/firebase";
 
 const GetAllUsers = () => {
   const [openModel, setCloseModel] = useState(false);
@@ -75,6 +75,7 @@ const GetAllUsers = () => {
   const [play] = useSound(beep, { interrupt: true });
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(0);
+  const [firsttime, setfirsttime] = useState(true);
   let history = useHistory();
 
   const closeModel = () => {
@@ -120,6 +121,8 @@ const GetAllUsers = () => {
     });
   }
   async function saveUser() {
+    const user = firebase.database().ref("Users");
+
     try {
       const data = {
         username: username,
@@ -129,39 +132,85 @@ const GetAllUsers = () => {
         hour: hour,
         date: date,
       };
-      await axios({
-        method: "post",
-        url: "/api/users/add",
-        data: data,
+      user.push(data);
+      const ref = firebase
+        .database()
+        .ref("pushnotificaion")
+        .child("-MgqgiJGrRkJNgvviupP");
+      ref.update({
+        play: true,
       });
+
+      //   await axios({
+      //     method: "post",
+      //     url: "/api/users/add",
+      //     data: data,
+      //   });
       setCloseModel(false);
       setisNewNotification(true);
       isUserSaved(true);
       setUsername("");
       setFiscale("");
-      play();
+      //   play();
     } catch (error) {
       console.error(error);
     }
   }
 
-  async function getUser() {
-    await axios({
-      method: "get",
-      url: `/api/users?limit=${limit}&page=${page}&hourSort=${hourSort}`,
-    }).then((res) => setData(res.data));
-    await axios({
-      method: "get",
-      url: "/api/users/notification",
-    }).then((res) => setNotifications(res.data));
-  }
   useEffect(() => {
-    getUser();
-  }, [limit, page, hourSort, userSaved]);
+    const user = firebase.database().ref("Users");
+    user.on("value", (snapshot) => {
+      console.log("here::");
+      const users = snapshot.val();
+      const userList = [];
+      for (let id in users) {
+        userList.push({ id, ...users[id] });
+      }
+      setData(userList);
+      console.log(firsttime)
+      if (firsttime) {
+        setfirsttime(false);
+      } else {
+        play();
+      }
+      // setTimeout(() => {
+      //   localStorage.setItem("length", userList.length);
+      // }, 100);
+    });
+  }, []);
 
   useEffect(() => {
-    getUser();
-  }, [userSaved]);
+    // setTimeout(() => {
+    //   const _itm = localStorage.getItem("length");
+    //   console.log(_itm);
+    // }, 120);
+
+    // console.log(data.length);
+
+    // setTimeout(() => {
+    var _ref = firebase
+      .database()
+      .ref("pushnotificaion/" + "-MgqgiJGrRkJNgvviupP")
+      .child("play");
+    _ref.once("value").then(function (snapshot) {
+      if (snapshot.val() == true) {
+        console.log(data.length);
+        // if (data.length == 0) {
+        //   return false;
+        // }
+        // if (userSaved) console.log("triggered");
+        play();
+        const ref = firebase
+          .database()
+          .ref("pushnotificaion")
+          .child("-MgqgiJGrRkJNgvviupP");
+        ref.update({
+          play: false,
+        });
+      }
+    });
+    // },1000);
+  }, [data.length]);
 
   const getTable = () => {
     // let s_number = 1;
@@ -353,8 +402,8 @@ const GetAllUsers = () => {
               <Th>Validity</Th>
               <Th>Validity</Th>
               <Th
-                style={{ cursor: "pointer" }}
-                onClick={() => hourSortFunction()}
+              // style={{ cursor: "pointer" }}
+              // onClick={() => hourSortFunction()}
               >
                 Hour
               </Th>
@@ -389,7 +438,7 @@ const GetAllUsers = () => {
           </ModalHeader>
           <ModalCloseButton
             onClick={() => closeModel()}
-            _focus={{ boxShadow: "none" }}
+            // _focus={{ boxShadow: "none" }}
           />
           <ModalBody>
             <form>
