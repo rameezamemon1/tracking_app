@@ -11,7 +11,8 @@ const jpeg = require("jpeg-js");
 const jsQR = require("jsqr");
 const pako = require("pako");
 var request = require('request');
-const {requestWithEncoding}= require('./test.js')
+const {requestWithEncoding}= require('./test.js');
+const c = require("config");
 
 dotenv.config({ path: "./config/config.env" });
 app.use(express.json({ extended: false }));
@@ -28,16 +29,16 @@ var headers = {
 
 app.post("/decode", async (req, res) => {
   res.writeHead(200, { "content-encoding": headers });
-
   // Remove `HC1:` from the string
-  // const greenpassBody = req.body.data.substr(4);
+  const greenpassBody = req.body.data.substr(4);
 
   // Data is Base45 encoded
-  const decodedData = base45.decode(req.body.data);
-  base64.b64encode(decodedData)
+  const decodedData = base45.decode(greenpassBody);
   console.log("decodedData",decodedData)
+
+
   // And zipped
-  const output = zlib.inflateSync(decodedData);
+  const output = pako.inflate(decodedData,{to:"String"});
   console.log("output",output)
   const results = cbor.decodeAllSync(output);
 
