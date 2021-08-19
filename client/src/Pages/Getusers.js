@@ -40,21 +40,17 @@ import {
   Td,
   TableCaption,
 } from "@chakra-ui/react";
-import { MdNotificationsNone, MdSettings, MdAdd } from "react-icons/md";
+import { MdSettings } from "react-icons/md";
 import axios from "axios";
 import moment from "moment";
 import useSound from "use-sound";
 import beep from "./../assets/short_notification.mp3";
 import right from "./../assets/right.svg";
 import wrong from "./../assets/wrong.svg";
-import {
-  AiFillStepForward,
-  AiFillStepBackward,
-  AiOutlineUserAdd,
-} from "react-icons/ai";
-import { BiBarcodeReader } from "react-icons/bi";
+import { AiOutlineUserAdd } from "react-icons/ai";
 import { useHistory } from "react-router-dom";
 import firebase from "../utill/firebase";
+import Header from "../components/header";
 
 const GetAllUsers = () => {
   const [openModel, setCloseModel] = useState(false);
@@ -73,53 +69,42 @@ const GetAllUsers = () => {
   const [data, setData] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [play] = useSound(beep, { interrupt: true });
-  const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(0);
-  const [firsttime, setfirsttime] = useState(true);
+  const [firsttime, setfirsttime] = useState(false);
   let history = useHistory();
 
+  async function deleteData() {
+    const deleteData = {
+      datefrom: new Date(datefrom).getTime(),
+      dateto: new Date(dateto).getTime(),
+    };
+    console.log(deleteData);
+    var usersRef = firebase.database().ref("Users");
+    usersRef.once("value").then(function (snapshot) {
+      const users_ref = snapshot.val();
+      for (var key in users_ref) {
+        console.log(users_ref[key].server_timestamp);
+        if (
+          users_ref[key]["server_timestamp"] > deleteData.datefrom &&
+          users_ref[key]["server_timestamp"] < deleteData.dateto
+        ) {
+          delete users_ref[key];
+          console.log(users_ref);
+        }
+      }
+    });
+  }
+
+  async function deleteAllData() {
+    var adaRef = firebase.database().ref("Users");
+    adaRef.remove();
+  }
   const closeModel = () => {
     setCloseModel(false);
   };
   const closeModelSetting = () => {
     setCloseSettingModel(false);
   };
-  const nextPage = () => {
-    setPage(page + 1);
-  };
-  const hourSortFunction = () => {
-    if (hourSort == 1) {
-      setHourSort(-1);
-    }
-    if (hourSort == -1) {
-      setHourSort(1);
-    }
-  };
-
-  const previousPage = () => {
-    if (page > 0) {
-      setPage(page - 1);
-    }
-  };
-
-  async function deleteData() {
-    const deleteData = {
-      datefrom: datefrom,
-      dateto: dateto,
-    };
-    await axios({
-      method: "delete",
-      url: `/api/users/deletedata`,
-      data: deleteData,
-    });
-  }
-
-  async function deleteAllData() {
-    await axios({
-      method: "delete",
-      url: `/api/users/deletedata/all`,
-    });
-  }
   async function saveUser() {
     const user = firebase.database().ref("Users");
 
@@ -131,6 +116,9 @@ const GetAllUsers = () => {
         isValid: isValid,
         hour: hour,
         date: date,
+        server_timestamp: {
+          ".sv": "timestamp",
+        },
       };
       user.push(data);
       const ref = firebase
@@ -140,18 +128,15 @@ const GetAllUsers = () => {
       ref.update({
         play: true,
       });
-
-      //   await axios({
-      //     method: "post",
-      //     url: "/api/users/add",
-      //     data: data,
-      //   });
       setCloseModel(false);
       setisNewNotification(true);
+      console.log("firsttime in saveUser", firsttime);
       isUserSaved(true);
+      setfirsttime(true);
+      console.log("firsttime in saveUser", firsttime);
       setUsername("");
+
       setFiscale("");
-      //   play();
     } catch (error) {
       console.error(error);
     }
@@ -160,57 +145,19 @@ const GetAllUsers = () => {
   useEffect(() => {
     const user = firebase.database().ref("Users");
     user.on("value", (snapshot) => {
-      console.log("here::");
       const users = snapshot.val();
       const userList = [];
       for (let id in users) {
         userList.push({ id, ...users[id] });
       }
       setData(userList);
-      console.log(firsttime)
       if (firsttime) {
-        setfirsttime(false);
+        play();
+        setisNewNotification(true);
       } else {
-        play();
-      }
-      // setTimeout(() => {
-      //   localStorage.setItem("length", userList.length);
-      // }, 100);
-    });
-  }, []);
-
-  useEffect(() => {
-    // setTimeout(() => {
-    //   const _itm = localStorage.getItem("length");
-    //   console.log(_itm);
-    // }, 120);
-
-    // console.log(data.length);
-
-    // setTimeout(() => {
-    var _ref = firebase
-      .database()
-      .ref("pushnotificaion/" + "-MgqgiJGrRkJNgvviupP")
-      .child("play");
-    _ref.once("value").then(function (snapshot) {
-      if (snapshot.val() == true) {
-        console.log(data.length);
-        // if (data.length == 0) {
-        //   return false;
-        // }
-        // if (userSaved) console.log("triggered");
-        play();
-        const ref = firebase
-          .database()
-          .ref("pushnotificaion")
-          .child("-MgqgiJGrRkJNgvviupP");
-        ref.update({
-          play: false,
-        });
       }
     });
-    // },1000);
-  }, [data.length]);
+  }, [firsttime]);
 
   const getTable = () => {
     // let s_number = 1;
@@ -218,7 +165,6 @@ const GetAllUsers = () => {
       return data.map((item, key) => {
         return (
           <Tr key={key}>
-            {/* <Td>{s_number++}</Td> */}
             <Td>{item.username}</Td>
             <Td>{item.codice_fiscale}</Td>
             <Td>{item.user_type}</Td>
@@ -317,74 +263,14 @@ const GetAllUsers = () => {
   };
   return (
     <React.Fragment>
-      <Flex p="5">
-        <Box p="2">
-          <Heading size="md">LOGO</Heading>
-        </Box>
-        <Spacer />
-        <Box>
-          <HStack>
-            <Popover className="popover__">
-              <PopoverTrigger>
-                <Circle
-                  size="40px"
-                  color="white"
-                  onClick={() => console.log("workign")}
-                  style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
-                >
-                  {isNewNotification ? (
-                    <div class="icon">
-                      <MdNotificationsNone
-                        size="30px"
-                        onClick={() => setisNewNotification(false)}
-                        style={{ color: "black" }}
-                      />
-                      <div class="txt"></div>
-                    </div>
-                  ) : (
-                    <MdNotificationsNone
-                      style={{ color: "black" }}
-                      size="30px"
-                    />
-                  )}
-                </Circle>
-              </PopoverTrigger>
-              <PopoverContent>
-                <PopoverHeader fontWeight="semibold">
-                  Notifications
-                </PopoverHeader>
-                <PopoverArrow />
-                <PopoverCloseButton />
-                <PopoverBody>{getNotifications()}</PopoverBody>
-              </PopoverContent>
-            </Popover>
-            <Circle
-              size="40px"
-              color="white"
-              style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
-              onClick={() => setCloseModel(true)}
-            >
-              <MdAdd size="30px" style={{ color: "black" }} />
-            </Circle>
-            <Circle
-              size="40px"
-              onClick={() => setCloseSettingModel(true)}
-              color="white"
-              style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
-            >
-              <MdSettings size="30px" style={{ color: "black" }} />
-            </Circle>
-            <Circle
-              size="40px"
-              onClick={() => history.push("./QrCodeReader")}
-              color="white"
-              style={{ backgroundColor: "#B2F5EA", cursor: "pointer" }}
-            >
-              <BiBarcodeReader size="30px" style={{ color: "black" }} />
-            </Circle>
-          </HStack>
-        </Box>
-      </Flex>
+      <Header
+        setisNewNotification={setisNewNotification}
+        getNotifications={getNotifications}
+        setCloseModel={setCloseModel}
+        setCloseSettingModel={setCloseSettingModel}
+        isNewNotification={isNewNotification}
+      />
+
       <Box className="boxTable">
         <Table
           variant="striped"
@@ -401,12 +287,7 @@ const GetAllUsers = () => {
               <Th>Validity</Th>
               <Th>Validity</Th>
               <Th>Validity</Th>
-              <Th
-              // style={{ cursor: "pointer" }}
-              // onClick={() => hourSortFunction()}
-              >
-                Hour
-              </Th>
+              <Th>Hour</Th>
               <Th>Date</Th>
             </Tr>
           </Thead>
@@ -414,18 +295,6 @@ const GetAllUsers = () => {
             {getTable()}
           </Tbody>
         </Table>
-        <Box>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <div onClick={previousPage} style={{ cursor: "pointer" }}>
-              {" "}
-              <AiFillStepBackward fontSize="20px" />{" "}
-            </div>
-            <div onClick={nextPage} style={{ cursor: "pointer" }}>
-              {" "}
-              <AiFillStepForward fontSize="20px" />
-            </div>
-          </div>
-        </Box>
       </Box>
       <Modal isOpen={openModel} onClose={closeModel} size="md">
         <ModalOverlay />
