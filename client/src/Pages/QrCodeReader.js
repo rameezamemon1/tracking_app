@@ -1,42 +1,22 @@
-import React, { useState, useEffect } from "react";
-import { MdSettings } from "react-icons/md";
-import {
-  Flex,
-  Center,
-  SimpleGrid,
-  Text,
-  Spacer,
-  Box,
-  HStack,
-  Divider,
-  Button,
-} from "@chakra-ui/react";
+import React, { useState } from "react";
+import { Center, SimpleGrid, Text, Button } from "@chakra-ui/react";
 import validator from "validator";
 import moment from "moment";
-import useSound from "use-sound";
-import beep from "./../assets/short_notification.mp3";
 import Header from "../components/header";
 import firebase from "../utill/firebase";
-import { AiOutlineUserAdd } from "react-icons/ai";
-import axios from "axios";
 import { createStandaloneToast } from "@chakra-ui/react";
-
 import {
   Input,
-  FormLabel,
-  ModalFooter,
-  FormControl,
   ModalCloseButton,
   ModalHeader,
   ModalBody,
   ModalOverlay,
+  ModalFooter,
   ModalContent,
-  Select,
   Modal,
 } from "@chakra-ui/react";
-
 import QrReader from "react-qr-reader";
-import { getQr } from "./helper";
+import { getQr } from "../utill/helper";
 const QrCodeReader = () => {
   const [openModel, setCloseModel] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -48,16 +28,18 @@ const QrCodeReader = () => {
   const [validUntil, setvalidUntil] = useState(""); //dt
   const [vacinationDate, setvacinationDate] = useState("");
   const [firstvacinationDate, setfirstvacinationDate] = useState(""); //fr
-  const [scannedData, setscannedData] = useState();
   const [accepted, setaccepted] = useState(false);
   const [rejected, setrejected] = useState(false);
   const [showSubmit, setshowSubmit] = useState(false);
   const hour = moment().format("hh:mm:ss A");
   const date = moment().format("dddd, Do MMMM YYYY");
-  const [play] = useSound(beep, { interrupt: true });
-  const [result, setResult] = useState();
+  const [isplay, setisplay] = useState(false);
+  const [openModelSetting, setCloseSettingModel] = useState(false);
   const toast = createStandaloneToast();
 
+  const closeModelSetting = () => {
+    setCloseSettingModel(false);
+  };
   const closeModel = () => {
     setCloseModel(false);
     setaccepted(false);
@@ -86,7 +68,6 @@ const QrCodeReader = () => {
       return;
     }
     const user = firebase.database().ref("Users");
-
     try {
       const data = {
         username: firstName + " " + lastName,
@@ -102,6 +83,20 @@ const QrCodeReader = () => {
       };
       user.push(data);
       setCloseModel(false);
+      const notify = firebase
+        .database()
+        .ref("notify")
+        .child("-MhZ0r76qZn9Ty_Eg76F");
+
+      notify.update({
+        play: true,
+      });
+
+      setisplay(true);
+      setCloseModel(false);
+      setaccepted(false);
+      setrejected(false);
+      setshowSubmit(false);
       toast({
         title: "Success",
         description: "User registred.",
@@ -147,7 +142,7 @@ const QrCodeReader = () => {
             );
         }
         setCloseModel(true);
-      }, 2000);
+      }, 1000);
     }
   };
   const handleError = (err) => {
@@ -168,6 +163,10 @@ const QrCodeReader = () => {
 
   return (
     <>
+      <Header
+        setCloseModel={setCloseModel}
+        setCloseSettingModel={setCloseSettingModel}
+      />
       <div>
         <QrReader
           delay={300}
