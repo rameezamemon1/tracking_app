@@ -3,8 +3,10 @@ import { Center, SimpleGrid, Text, Button } from "@chakra-ui/react";
 import validator from "validator";
 import moment from "moment";
 import Header from "../components/header";
-import firebase from "../utill/firebase";
+import { addNewUser } from '../redux/action';
 import { createStandaloneToast } from "@chakra-ui/react";
+import PropTypes from 'prop-types';
+import { connect } from 'react-redux';
 import {
   Input,
   ModalCloseButton,
@@ -17,7 +19,7 @@ import {
 } from "@chakra-ui/react";
 import QrReader from "react-qr-reader";
 import { getQr } from "../utill/helper";
-const QrCodeReader = () => {
+const QrCodeReader = (props) => {
   const [openModel, setCloseModel] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -67,7 +69,6 @@ const QrCodeReader = () => {
       });
       return;
     }
-    const user = firebase.database().ref("Users");
     try {
       const data = {
         username: firstName + " " + lastName,
@@ -75,22 +76,19 @@ const QrCodeReader = () => {
         isValid: true,
         hour: hour,
         date: date,
-        phone: phoneNumber,
+        phoneNumber: phoneNumber,
         email: email,
-        server_timestamp: {
-          ".sv": "timestamp",
-        },
       };
-      user.push(data);
+      await props.addNewUser(data)
       setCloseModel(false);
-      const notify = firebase
-        .database()
-        .ref("notify")
-        .child("-MhZ0r76qZn9Ty_Eg76F");
+      // const notify = firebase
+      //   .database()
+      //   .ref("notify")
+      //   .child("-MhZ0r76qZn9Ty_Eg76F");
 
-      notify.update({
-        play: true,
-      });
+      // notify.update({
+      //   play: true,
+      // });
 
       setisplay(true);
       setCloseModel(false);
@@ -256,7 +254,6 @@ const QrCodeReader = () => {
                       <Button
                         bg="green.500"
                         width="100px"
-                        _focus={{ backgroundColor: "green.500" }}
                         _hover={{ backgroundColor: "green.500" }}
                         onClick={() => buttonHandle("accepted")}
                         mx="2"
@@ -266,7 +263,6 @@ const QrCodeReader = () => {
                       <Button
                         width="100px"
                         bg="red.500"
-                        _focus={{ backgroundColor: "red.500" }}
                         _hover={{ backgroundColor: "red.500" }}
                         mx="2"
                         onClick={() => buttonHandle("rejected")}
@@ -283,7 +279,6 @@ const QrCodeReader = () => {
                       <Button
                         bg="green.500"
                         width="100px"
-                        _focus={{ backgroundColor: "green.500" }}
                         _hover={{ backgroundColor: "green.500" }}
                         onClick={() => saveUser()}
                         mx="2"
@@ -295,7 +290,6 @@ const QrCodeReader = () => {
                       <Button
                         width="100px"
                         bg="red.500"
-                        _focus={{ backgroundColor: "red.500" }}
                         _hover={{ backgroundColor: "red.500" }}
                         mx="2"
                         onClick={() => closeModel()}
@@ -315,4 +309,21 @@ const QrCodeReader = () => {
     </>
   );
 };
-export default QrCodeReader;
+
+QrCodeReader.propTypes = {
+  saved: PropTypes.bool,
+  addNewUser: PropTypes.func.isRequired,
+};
+
+const mapStateToProps = (state) => {
+  return {
+    user: state
+  };
+};
+// const mapStateToProps = (state) => ({
+//   saved: state.user.saved,
+// });
+export default connect(mapStateToProps, {
+  addNewUser,
+})(QrCodeReader);
+

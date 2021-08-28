@@ -11,57 +11,54 @@ import {
 } from "@chakra-ui/react";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@chakra-ui/react";
 import { MdSettings } from "react-icons/md";
+import { getAllUsers, getPlay, updatePlay } from "../redux/action";
+import PropTypes from "prop-types";
+import { connect } from "react-redux";
 import useSound from "use-sound";
 import beep from "./../assets/short_notification.mp3";
 import right from "./../assets/right.svg";
 import wrong from "./../assets/wrong.svg";
-import firebase from "../utill/firebase";
 import Header from "../components/header";
 
-const GetAllUsers = () => {
+const GetUsers = (props) => {
   const [openModel, setCloseModel] = useState(false);
   const [openModelSetting, setCloseSettingModel] = useState(false);
   const [data, setData] = useState([]);
   const [play] = useSound(beep, { interrupt: true });
 
   async function deleteAllData() {
-    var adaRef = firebase.database().ref("Users");
-    adaRef.remove();
     closeModelSetting();
   }
   const closeModelSetting = () => {
     setCloseSettingModel(false);
   };
+  async function apiCall() {
+    await props.getAllUsers();
+    await props.getPlay();
+  }
   useEffect(() => {
-    const user = firebase.database().ref("Users");
-    user.on("value", (snapshot) => {
-      const users = snapshot.val();
-      const userList = [];
-      for (let id in users) {
-        userList.push({ id, ...users[id] });
-      }
-      setData(userList);
-    });
-  }, []);
+    apiCall();
+    setData(props.user.users);
+  }, [props.user.users]);
 
   useEffect(() => {
-    const notify = firebase
-      .database()
-      .ref("notify")
-      .child("-MhZ0r76qZn9Ty_Eg76F");
-    notify.on("value", (snapshot) => {
-      const notifys = snapshot.val();
-      if (notifys.play == true) play();
-      setTimeout(() => {
-        notify.update({
-          play: false,
-        });
-      }, 10000);
-    });
-  }, [data]);
+    if (props.user?.play?.play == true) {
+      play();
+    }
+    setTimeout(async () => {
+      await props.updatePlay();
+    }, 60000);
+  }, [props.user]);
 
   const getTable = () => {
     // let s_number = 1;
+    if (!data || data == undefined) {
+      return (
+        <Tr style={{ textAlign: "center", width: 100 }}>
+          <Td colspan="10">No data found</Td>
+        </Tr>
+      );
+    }
     if (data.length > 0) {
       return data.map((item, key) => {
         return (
@@ -86,7 +83,6 @@ const GetAllUsers = () => {
                     width="20px"
                     height="20px"
                     alt="wrong"
-
                     style={{ margin: "auto" }}
                   />
                 </span>
@@ -109,7 +105,6 @@ const GetAllUsers = () => {
                     src={wrong}
                     width="20px"
                     alt="wrong"
-
                     height="20px"
                     style={{ margin: "auto" }}
                   />
@@ -123,7 +118,6 @@ const GetAllUsers = () => {
                     src={right}
                     width="20px"
                     alt="right"
-
                     height="20px"
                     style={{ margin: "auto" }}
                   />
@@ -134,7 +128,6 @@ const GetAllUsers = () => {
                     src={wrong}
                     width="20px"
                     alt="wrong"
-
                     height="20px"
                     style={{ margin: "auto" }}
                   />
@@ -146,12 +139,6 @@ const GetAllUsers = () => {
           </Tr>
         );
       });
-    } else {
-      return (
-        <Tr style={{ textAlign: "center",width:100 }}>
-          <Td colspan="10">No data found</Td>
-        </Tr>
-      );
     }
   };
 
@@ -196,16 +183,12 @@ const GetAllUsers = () => {
               <Text>Settings</Text>
             </HStack>
           </ModalHeader>
-          <ModalCloseButton
-            onClick={() => closeModelSetting()}
-            _focus={{ boxShadow: "none" }}
-          />
+          <ModalCloseButton onClick={() => closeModelSetting()} />
           <ModalBody>
             <form>
               <Box textAlign="center">
                 <Button
                   bg="red.500"
-                  _focus={{ backgroundColor: "red.500" }}
                   _hover={{ backgroundColor: "red.500" }}
                   onClick={() => deleteAllData()}
                   mt={5}
@@ -222,4 +205,20 @@ const GetAllUsers = () => {
     </React.Fragment>
   );
 };
-export default GetAllUsers;
+
+GetUsers.propTypes = {
+  getAllUsers: PropTypes.func.isRequired,
+  getPlay: PropTypes.func.isRequired,
+  updatePlay: PropTypes.func.isRequired,
+};
+
+const mapStateToProps = (state) => {
+  return {
+    user: state,
+  };
+};
+export default connect(mapStateToProps, {
+  getAllUsers,
+  getPlay,
+  updatePlay
+})(GetUsers);

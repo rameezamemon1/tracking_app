@@ -5,44 +5,35 @@ const UserSchema = new mongoose.Schema(
   {
     username: {
       type: String,
-      unique: true,
-      required: true,
-    },
-    codice_fiscale: {
-      type: String,
-      unique: true,
       required: true,
     },
     user_type: {
       type: String,
-      enum: ["Greenpass", "Tampone"],
-      default:"Greenpass"
+      default: "Green Pass"
     },
     isValid: {
       type: Boolean,
-      default: false,
-    },
-    isAvailable_one: {
-      type: Boolean,
-      default: false,
-    },
-    isAvailable_two: {
-      type: Boolean,
-      default: false,
-    },
-    isAvailable_four: {
-      type: Boolean,
-      default: false,
+      default: true,
     },
     hour: {
       type: String,
+      required: true,
     },
     date: {
       type: String,
+      required: true,
     },
+    email: {
+      type: String,
+      required: true,
+    },
+    phoneNumber: {
+      type: String,
+      required: true,
+    }
+
   },
   { timestamps: true }
 );
 
-
-module.exports = User = mongoose.model("user", UserSchema);
+module.exports = User = mongoose.model("users", UserSchema);
